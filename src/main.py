@@ -24,10 +24,10 @@ class Connector:
     commission_blocked(float),name(str),server(str),currency(str),company(str)
     """
 
-    def __init__(self, login='3000020370', password='f4DTmB1hlAT'):
+    def __init__(self):
 
         connect()
-        if mt5.login(login, password) and mt5.account_info() is not None:
+        if mt5.account_info() is not None:
 
             self.account_info = mt5.account_info()._asdict()
             # self.symbols = mt5.symbols_get(group="*,!*USD*,!*EUR*,!*JPY*,!*GBP*")
@@ -39,7 +39,6 @@ class Connector:
         else:
             print('[CLIENT] Server Authorization failed, Quitting app')
             mt5.shutdown()
-            quit()
 
     def symbol_info(self, symbols):
         """
@@ -60,7 +59,8 @@ class Connector:
         else:
             print('[symbol_info] Unable to get info from unselected symbols')
 
-    def make_request(self, action=mt5.TRADE_ACTION_DEAL, symbol='EURUSD', volume=1.0,
+    @staticmethod
+    def make_request(action=mt5.TRADE_ACTION_DEAL, symbol='EURUSD', volume=1.0,
                      type=mt5.ORDER_TYPE_BUY, market=False, sl_points=100, tp_points=100,
                      magic=123456, comment='MT5 Python'):
         """
@@ -73,8 +73,10 @@ class Connector:
         :param tp_points: (int) n# of point above ask price to close trade
         :param magic: (int) the magic number :)
         :param comment: (str) comment
-
+        :return: (stack) [request, return-code]
         """
+        ret_code = 0
+
         symbol_info = mt5.symbol_info(symbol)
         if symbol_info is None:
             print(symbol, "not found, can not call order_check()")
@@ -99,15 +101,28 @@ class Connector:
             "magic": magic,
             "comment": comment,
             "type_time": mt5.ORDER_TIME_GTC,  # The order stays in the queue until it is manually canceled
-            "type_filling": mt5.ORDER_FILLING_RETURN,  # https://www.mql5.com/en/docs/integration/python_metatrader5/mt5ordercheck_py
+            "type_filling": mt5.ORDER_FILLING_RETURN,
+            # https://www.mql5.com/en/docs/integration/python_metatrader5/mt5ordercheck_py
         }
         if market:
             request['price'] = 0.0
             request['type_filling'] = mt5.ORDER_FILLING_IOC
 
-        return mt5.order_check(request)
+        result_dict = mt5.order_check(request)._as_dict()
+        for field in result_dict.keys():
+            print("   {}={}".format(field, result_dict[field]))
+            if field == 'retcode':
+                ret_code = result_dict[field]
+            # if this is a trading request structure, display it element by element as well
+            if field == "request":
+                traderequest_dict = result_dict[field]._asdict()
+                for tradereq_filed in traderequest_dict:
+                    print("       traderequest: {}={}".format(tradereq_filed, traderequest_dict[tradereq_filed]))
 
-    def send_command(self, request):
+        return request, ret_code
+
+    @staticmethod
+    def send_command(request):
         """
 
         """
@@ -150,7 +165,8 @@ class Connector:
             df['time_setup'] = pd.to_datetime(df['time_setup'], unit='s')
             return df
 
-    def get_rates(self, symbol, start=0, timeframe='TIMEFRAME_D1', count=270, end=None):
+    @staticmethod
+    def get_rates(symbol, start=0, timeframe='TIMEFRAME_D1', count=270, end=None):
         """
 
         :param symbol: (str)
@@ -229,3 +245,7 @@ class Connector:
             return True
         else:
             return False
+
+
+if __name__ == "__main__":
+    conn = Connector()
