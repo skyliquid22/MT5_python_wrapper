@@ -32,7 +32,7 @@ class Connector:
             self.account_info = mt5.account_info()._asdict()
             # self.symbols = mt5.symbols_get(group="*,!*USD*,!*EUR*,!*JPY*,!*GBP*")
             self.all_symbols = mt5.symbols_total()
-            self.currency = mt5.account_info().currency
+            self.account = mt5.account_info()
             # Symbols in the Market watch window
             self.selected = []
 
@@ -58,6 +58,11 @@ class Connector:
             return pd.concat(info_list)
         else:
             print('[symbol_info] Unable to get info from unselected symbols')
+
+    def get_balance(self):
+        print('ACCOUNT BALANCE: {} {a}\nACCOUNT EQUITY: {} {a}'.format(self.account.balance,
+                                                                       self.account.equity, a=self.account.currency))
+        return self.account.balance
 
     @staticmethod
     def make_request(action=mt5.TRADE_ACTION_DEAL, symbol='EURUSD', volume=1.0,
