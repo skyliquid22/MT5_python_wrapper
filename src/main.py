@@ -1,7 +1,11 @@
+from logging.handlers import TimedRotatingFileHandler,
+
 import pandas as pd
 import datetime
 
 import MetaTrader5 as mt5
+
+from src.db.db_connection import DBConnector
 
 
 def connect():
@@ -80,7 +84,6 @@ class Connector:
         :param comment: (str) comment
         :return: (stack) [request, return-code]
         """
-        ret_code = 0
 
         symbol_info = mt5.symbol_info(symbol)
         if symbol_info is None:
@@ -100,54 +103,67 @@ class Connector:
             "volume": volume,
             "type": type,
             "price": mt5.symbol_info_tick(symbol).ask,
-            "sl": mt5.symbol_info_tick(symbol).ask - sl_points * point,
-            "tp": mt5.symbol_info_tick(symbol).ask + tp_points * point,
+            "sl": round(mt5.symbol_info_tick(symbol).ask - sl_points * point, 5),
+            "tp": round(mt5.symbol_info_tick(symbol).ask + tp_points * point, 5),
             "deviation": 10,
             "magic": magic,
             "comment": comment,
             "type_time": mt5.ORDER_TIME_GTC,  # The order stays in the queue until it is manually canceled
-            "type_filling": mt5.ORDER_FILLING_RETURN,
+            "type_filling": mt5.ORDER_FILLING_FOK,
             # https://www.mql5.com/en/docs/integration/python_metatrader5/mt5ordercheck_py
         }
         if market:
             request['price'] = 0.0
-            request['type_filling'] = mt5.ORDER_FILLING_IOC
+            request['type_filling'] = mt5.ORDER_FILLING_RETURN
 
         return request
 
-    @staticmethod
-    def check_request(request):
+    def check_request(self, request, verbose=False):
         """
         :return: The Structure of Results of a Trade Request Check
         """
 
-        result_dict = mt5.order_check(request)._as_dict()
-        if result_dict['retcode'] ==
+        result = mt5.order_check(request)
+        result_dict = result._asdict()
+        if int(result_dict['retcode']) == 0:
+            print('[MT5 SERVER] REQUEST VALID.')
+        else:
+            cont, description = self._return_code_dict(result_dict.retcode)
+            print('[MT5 SERVER] Request Issue. Description: {}'.format(description))
 
-        for field in result_dict.keys():
-            if field == 'retcode':
-                pass  # TODO: Process return code here
-            # if this is a trading request structure, display it element by element as well
-            if field == "request":
-                traderequest_dict = result_dict[field]._asdict()
-                for tradereq_filed in traderequest_dict:
-                    print("       traderequest: {}={}".format(tradereq_filed, traderequest_dict[tradereq_filed]))
+        if verbose:
+            for field in result_dict.keys():
+                print("   {}={}".format(field, result_dict[field]))
+                # if this is a trading request structure, display it element by element as well
+                if field == "request":
+                    traderequest_dict = result_dict[field]._asdict()
+                    for tradereq_filed in traderequest_dict:
+                        print("       traderequest: {}={}".format(tradereq_filed, traderequest_dict[tradereq_filed]))
 
     @staticmethod
     def _return_code_dict(ret_code):
-        pass
+        dbconn = DBConnector()
+        df = dbconn.get_df_from_query("SELECT * FROM mt5_return_codes WHERE id={}".format(ret_code))
 
-    @staticmethod
-    def send_command(request):
+        return df['Constant'].values, df['Description'].values
+
+    def _save_log(self, result_dict):
+
+        # File Handler
+        fh = TimedRotatingFileHandler('mylogfile', when='midnight')
+        fh.suffix = '%Y_%m_%d.log'
+
+    def send_command(self, request):
         """
         Send command to Mt5 Terminal
         """
         result = mt5.order_send(request)
+        result_dict = result._asdict()
         # check the execution result
         if result.retcode != mt5.TRADE_RETCODE_DONE:
-            print("send_command, ret code={}".format(result.retcode))
-            # request the result as a dictionary and display it element by element
-            result_dict = result._asdict()
+            cont, description = self._return_code_dict(result_dict.retcode)
+            print('[MT5 SERVER] Order Issue. Description: {}'.format(description))
+
             for field in result_dict.keys():
                 print("   {}={}".format(field, result_dict[field]))
                 # if this is a trading request structure, display it element by element as well
@@ -157,9 +173,8 @@ class Connector:
                         print("       traderequest: {}={}".format(tradereq_filed, traderequest_dict[tradereq_filed]))
             print("shutdown() and quit")
             mt5.shutdown()
-            quit()
-
-        print("send_command done, ", result)
+        else:
+            print("[MT5 SERVER] COMMAND EXECUTED SUCCESSFULLY!")
 
     @staticmethod
     def get_orders_count():
@@ -261,7 +276,3 @@ class Connector:
             return True
         else:
             return False
-
-
-if __name__ == "__main__":
-    conn = Connector()
