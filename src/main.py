@@ -113,23 +113,34 @@ class Connector:
             request['price'] = 0.0
             request['type_filling'] = mt5.ORDER_FILLING_IOC
 
+        return request
+
+    @staticmethod
+    def check_request(request):
+        """
+        :return: The Structure of Results of a Trade Request Check
+        """
+
         result_dict = mt5.order_check(request)._as_dict()
+        if result_dict['retcode'] ==
+
         for field in result_dict.keys():
-            print("   {}={}".format(field, result_dict[field]))
             if field == 'retcode':
-                ret_code = result_dict[field]
+                pass  # TODO: Process return code here
             # if this is a trading request structure, display it element by element as well
             if field == "request":
                 traderequest_dict = result_dict[field]._asdict()
                 for tradereq_filed in traderequest_dict:
                     print("       traderequest: {}={}".format(tradereq_filed, traderequest_dict[tradereq_filed]))
 
-        return request, ret_code
+    @staticmethod
+    def _return_code_dict(ret_code):
+        pass
 
     @staticmethod
     def send_command(request):
         """
-
+        Send command to Mt5 Terminal
         """
         result = mt5.order_send(request)
         # check the execution result
