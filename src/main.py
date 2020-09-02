@@ -1,4 +1,5 @@
-from logging.handlers import TimedRotatingFileHandler,
+import logging
+from logging.handlers import TimedRotatingFileHandler
 
 import pandas as pd
 import datetime
@@ -39,6 +40,13 @@ class Connector:
             self.account = mt5.account_info()
             # Symbols in the Market watch window
             self.selected = []
+
+            # Log file for server warnings or errors.
+            self.logger = logging.getLogger('my_logger')
+            self.logger.setLevel(logging.DEBUG)
+            handler = TimedRotatingFileHandler("logfile", when='midnight')
+            handler.suffix = '%Y_%m_%d.log'
+            self.logger.addHandler(handler)
 
         else:
             print('[CLIENT] Server Authorization failed, Quitting app')
@@ -147,12 +155,6 @@ class Connector:
 
         return df['Constant'].values, df['Description'].values
 
-    def _save_log(self, result_dict):
-
-        # File Handler
-        fh = TimedRotatingFileHandler('mylogfile', when='midnight')
-        fh.suffix = '%Y_%m_%d.log'
-
     def send_command(self, request):
         """
         Send command to Mt5 Terminal
@@ -161,6 +163,8 @@ class Connector:
         result_dict = result._asdict()
         # check the execution result
         if result.retcode != mt5.TRADE_RETCODE_DONE:
+            # log issue
+            self.logger.debug(result)
             cont, description = self._return_code_dict(result_dict.retcode)
             print('[MT5 SERVER] Order Issue. Description: {}'.format(description))
 
@@ -175,6 +179,7 @@ class Connector:
             mt5.shutdown()
         else:
             print("[MT5 SERVER] COMMAND EXECUTED SUCCESSFULLY!")
+            # TODO: add order with assigned ticket to open orders in DB
 
     @staticmethod
     def get_orders_count():
