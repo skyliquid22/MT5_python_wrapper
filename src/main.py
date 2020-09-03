@@ -77,7 +77,7 @@ class Connector:
         return self.account.balance
 
     @staticmethod
-    def make_request(action=mt5.TRADE_ACTION_DEAL, symbol='EURUSD', volume=1.0,
+    def make_request(action=mt5.TRADE_ACTION_DEAL, symbol='EURUSD', volume=0.01,
                      type=mt5.ORDER_TYPE_BUY, market=False, sl_points=100, tp_points=100,
                      magic=123456, comment='MT5 Python'):
         """
@@ -148,6 +148,15 @@ class Connector:
                     for tradereq_filed in traderequest_dict:
                         print("       traderequest: {}={}".format(tradereq_filed, traderequest_dict[tradereq_filed]))
 
+    def _save_order(self, r_dict):
+        dbconn = DBConnector()
+        now = datetime.datetime.utcnow()
+        #cols = tuple("orderid timestamp retcode symbol".split(' '))
+        vals = tuple([r_dict['order'], now.strftime('%Y-%m-%d %H:%M:%S'), r_dict['retcode'], 'EURUSD'])
+        sql = """INSERT INTO order_history (orderid, timestamp, retcode, symbol) VALUES {}""".format(vals)
+        dbconn.execute_query(sql)
+
+
     @staticmethod
     def _return_code_dict(ret_code):
         dbconn = DBConnector()
@@ -165,7 +174,7 @@ class Connector:
         if result.retcode != mt5.TRADE_RETCODE_DONE:
             # log issue
             self.logger.debug(result)
-            cont, description = self._return_code_dict(result_dict.retcode)
+            cont, description = self._return_code_dict(result_dict['retcode'])
             print('[MT5 SERVER] Order Issue. Description: {}'.format(description))
 
             for field in result_dict.keys():
@@ -179,6 +188,8 @@ class Connector:
             mt5.shutdown()
         else:
             print("[MT5 SERVER] COMMAND EXECUTED SUCCESSFULLY!")
+            print(result_dict)
+            self._save_order(result_dict)
             # TODO: add order with assigned ticket to open orders in DB
 
     @staticmethod
