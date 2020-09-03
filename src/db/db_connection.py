@@ -44,17 +44,6 @@ class DBConnector:
         with self.engine.connect() as conn:
             conn.execute(query)
 
-    def create_table(self):
-
-        meta = MetaData()
-        mt5_return_codes = Table(
-            'mt5_return_codes', meta,
-            Column('id', Integer, primary_key=True),
-            Column('Constant', String),
-            Column('Description', String)
-        )
-        meta.create_all(self.engine)
-
     @staticmethod
     def config(filename='src/db/database.ini', section='postgresql'):
         # create parser
@@ -73,17 +62,3 @@ class DBConnector:
 
         return db
 
-
-class Mt5Codes(Base):
-    __tablename__ = 'mt5_return_codes'
-
-    id = Column('id', Integer, primary_key=True),
-    Constant = Column('Constant', String),
-    Description = Column('Description', String)
-
-    def __repr__(self):
-        return "<mt5_return_codes(Constant='%s', Description='%s')>" % (
-            self.Constant, self.Description)
-
-def create_tables():
-    Mt5Codes.__table__
