@@ -148,14 +148,45 @@ class Connector:
                     for tradereq_filed in traderequest_dict:
                         print("       traderequest: {}={}".format(tradereq_filed, traderequest_dict[tradereq_filed]))
 
-    def _save_order(self, r_dict):
+    @staticmethod
+    def _save_order(result):
         dbconn = DBConnector()
         now = datetime.datetime.utcnow()
-        #cols = tuple("orderid timestamp retcode symbol".split(' '))
-        vals = tuple([r_dict['order'], now.strftime('%Y-%m-%d %H:%M:%S'), r_dict['retcode'], 'EURUSD'])
-        sql = """INSERT INTO order_history (orderid, timestamp, retcode, symbol) VALUES {}""".format(vals)
-        dbconn.execute_query(sql)
 
+        result_dict = result._asdict()
+        traderequest_dict = result_dict['request']._asdict()
+
+        vals = tuple([
+            result_dict['order'],  # Order ticket id
+            now.strftime('%Y-%m-%d %H:%M:%S'),  # timestamp
+            result_dict['retcode'],  # Return code of request
+            traderequest_dict['symbol'],  # the symbol affecting
+            result_dict['price'],
+            result_dict['bid'],
+            result_dict['ask'],
+            result_dict['comment'],
+            result_dict['volume'],
+            result_dict['deal'],
+            traderequest_dict['action'],
+            traderequest_dict['volume'],
+            traderequest_dict['price'],
+            traderequest_dict['stoplimit'],
+            traderequest_dict['sl'],
+            traderequest_dict['tp'],
+            traderequest_dict['type'],
+            traderequest_dict['type_filling'],
+            traderequest_dict['type_time'],
+            traderequest_dict['expiration'],
+            traderequest_dict['comment']
+
+
+        ])
+
+        sql = """INSERT INTO order_history (
+        orderid, timestamp, retcode, symbol, price, bid, ask, comment, volume, dealid, tr_action, tr_volume, tr_price,
+        tr_stoplimit, tr_sl, tr_tp, tr_type, tr_type_filling, tr_type_time, tr_expiration, tr_comment
+        ) VALUES {}""".format(vals)
+        dbconn.execute_query(sql)
 
     @staticmethod
     def _return_code_dict(ret_code):
@@ -188,9 +219,7 @@ class Connector:
             mt5.shutdown()
         else:
             print("[MT5 SERVER] COMMAND EXECUTED SUCCESSFULLY!")
-            print(result_dict)
-            self._save_order(result_dict)
-            # TODO: add order with assigned ticket to open orders in DB
+            self._save_order(result)
 
     @staticmethod
     def get_orders_count():
