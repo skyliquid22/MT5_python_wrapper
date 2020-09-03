@@ -321,3 +321,7 @@ class Connector:
             return True
         else:
             return False
+
+    @staticmethod
+    def shutdown():
+        mt5.shutdown()
