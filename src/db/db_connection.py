@@ -1,7 +1,6 @@
 from configparser import ConfigParser
 
 from sqlalchemy import create_engine
-from sqlalchemy import Table, Column, Integer, String, MetaData
 from sqlalchemy.ext.declarative import declarative_base
 
 import pandas as pd
@@ -61,4 +60,3 @@ class DBConnector:
             raise Exception('Section {0} not found in the {1} file'.format(section, filename))
 
         return db
-
