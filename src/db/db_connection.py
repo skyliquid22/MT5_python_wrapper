@@ -1,8 +1,13 @@
 from configparser import ConfigParser
+
 from sqlalchemy import create_engine
 from sqlalchemy import Table, Column, Integer, String, MetaData
+from sqlalchemy.ext.declarative import declarative_base
 
 import pandas as pd
+
+# Declarative base class for mapping
+Base = declarative_base()
 
 
 class DBConnector:
@@ -42,7 +47,6 @@ class DBConnector:
     def create_table(self):
 
         meta = MetaData()
-
         mt5_return_codes = Table(
             'mt5_return_codes', meta,
             Column('id', Integer, primary_key=True),
@@ -68,3 +72,18 @@ class DBConnector:
             raise Exception('Section {0} not found in the {1} file'.format(section, filename))
 
         return db
+
+
+class Mt5Codes(Base):
+    __tablename__ = 'mt5_return_codes'
+
+    id = Column('id', Integer, primary_key=True),
+    Constant = Column('Constant', String),
+    Description = Column('Description', String)
+
+    def __repr__(self):
+        return "<mt5_return_codes(Constant='%s', Description='%s')>" % (
+            self.Constant, self.Description)
+
+def create_tables():
+    Mt5Codes.__table__
