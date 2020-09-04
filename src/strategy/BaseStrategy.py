@@ -2,7 +2,7 @@
 TODO: Use expert advisor to stream market data.
 """
 
-from src.connector import Connector
+from src.client.connector import Connector
 from time import sleep
 from threading import Thread, Lock
 
@@ -76,4 +76,4 @@ class CoinFlipStrategy(BaseStrategy):
         """
         TODO: use self.conn.make_request()
         """
-        pass
+        self.conn.make_request()
