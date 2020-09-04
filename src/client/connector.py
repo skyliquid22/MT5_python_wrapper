@@ -149,46 +149,6 @@ class Connector:
                         print("       traderequest: {}={}".format(tradereq_filed, traderequest_dict[tradereq_filed]))
 
     @staticmethod
-    def _save_order(result):
-        dbconn = DBConnector()
-        now = datetime.datetime.utcnow()
-
-        result_dict = result._asdict()
-        traderequest_dict = result_dict['request']._asdict()
-
-        vals = tuple([
-            result_dict['order'],  # Order ticket id
-            now.strftime('%Y-%m-%d %H:%M:%S'),  # timestamp
-            result_dict['retcode'],  # Return code of request
-            traderequest_dict['symbol'],  # the symbol affecting
-            result_dict['price'],
-            result_dict['bid'],
-            result_dict['ask'],
-            result_dict['comment'],
-            result_dict['volume'],
-            result_dict['deal'],
-            traderequest_dict['action'],
-            traderequest_dict['volume'],
-            traderequest_dict['price'],
-            traderequest_dict['stoplimit'],
-            traderequest_dict['sl'],
-            traderequest_dict['tp'],
-            traderequest_dict['type'],
-            traderequest_dict['type_filling'],
-            traderequest_dict['type_time'],
-            traderequest_dict['expiration'],
-            traderequest_dict['comment']
-
-
-        ])
-
-        sql = """INSERT INTO order_history (
-        orderid, timestamp, retcode, symbol, price, bid, ask, comment, volume, dealid, tr_action, tr_volume, tr_price,
-        tr_stoplimit, tr_sl, tr_tp, tr_type, tr_type_filling, tr_type_time, tr_expiration, tr_comment
-        ) VALUES {}""".format(vals)
-        dbconn.execute_query(sql)
-
-    @staticmethod
     def _return_code_dict(ret_code):
         dbconn = DBConnector()
         df = dbconn.get_df_from_query("SELECT * FROM mt5_return_codes WHERE id={}".format(ret_code))
@@ -219,7 +179,7 @@ class Connector:
             mt5.shutdown()
         else:
             print("[MT5 SERVER] COMMAND EXECUTED SUCCESSFULLY!")
-            self._save_order(result)
+            return result
 
     @staticmethod
     def get_orders_count():
@@ -321,6 +281,19 @@ class Connector:
             return True
         else:
             return False
+
+    def terminal_info(self):
+        """
+        TODO: add gloabl variable IsON if req props are True
+        """
+
+        terminal_info = mt5.terminal_info()
+        if terminal_info is not None:
+
+            terminal_info_dict = terminal_info._asdict()
+
+        else:
+            print('[CLIENT] Failed to get terminal info. Error: {}'.format(mt5.last_error()))
 
     @staticmethod
     def shutdown():

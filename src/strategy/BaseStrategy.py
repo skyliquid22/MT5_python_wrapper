@@ -2,9 +2,14 @@
 TODO: Use expert advisor to stream market data.
 """
 
+from src.db.db_connection import DBConnector
 from src.client.connector import Connector
+
 from time import sleep
+import datetime
 from threading import Thread, Lock
+
+import pandas as pd
 
 
 class BaseStrategy(object):
@@ -19,8 +24,51 @@ class BaseStrategy(object):
 
         # Strategy's ON/OFF switch
         self.isON = True
+        self.trades = pd.DataFrame(columns=['orderid', 'timestamp', 'retcode', 'symbol', 'price', 'bid', 'ask',
+                                            'comment', 'volume', 'dealid', 'tr_action', 'tr_volume', 'tr_price',
+                                            'tr_stoplimit', 'tr_sl', 'tr_tp', 'tr_type', 'tr_type_filling',
+                                            'tr_type_time', 'tr_expiration', 'tr_comment'])
 
         self.lock = Lock()
+
+    def _save_order(self, result):
+        dbconn = DBConnector()
+        now = datetime.datetime.utcnow()
+
+        result_dict = result._asdict()
+        traderequest_dict = result_dict['request']._asdict()
+
+        vals = tuple([
+            result_dict['order'],  # Order ticket id
+            now.strftime('%Y-%m-%d %H:%M:%S'),  # timestamp
+            result_dict['retcode'],  # Return code of request
+            traderequest_dict['symbol'],  # the symbol affecting
+            result_dict['price'],
+            result_dict['bid'],
+            result_dict['ask'],
+            result_dict['comment'],
+            result_dict['volume'],
+            result_dict['deal'],
+            traderequest_dict['action'],
+            traderequest_dict['volume'],
+            traderequest_dict['price'],
+            traderequest_dict['stoplimit'],
+            traderequest_dict['sl'],
+            traderequest_dict['tp'],
+            traderequest_dict['type'],
+            traderequest_dict['type_filling'],
+            traderequest_dict['type_time'],
+            traderequest_dict['expiration'],
+            traderequest_dict['comment']
+
+        ])
+        self.trades = self.trades.append(pd.concat([result_dict, traderequest_dict]), ignore_index=True)
+
+        sql = """INSERT INTO order_history (
+        orderid, timestamp, retcode, symbol, price, bid, ask, comment, volume, dealid, tr_action, tr_volume, tr_price,
+        tr_stoplimit, tr_sl, tr_tp, tr_type, tr_type_filling, tr_type_time, tr_expiration, tr_comment
+        ) VALUES {}""".format(vals)
+        dbconn.execute_query(sql)
 
 
 class CoinFlipStrategy(BaseStrategy):
