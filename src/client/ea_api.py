@@ -116,6 +116,7 @@ class EAConnector:
 
         # Market Data Dictionary by Symbol (holds tick data)
         self.market_data_db = {}  # {SYMBOL: {TIMESTAMP: (BID, ASK)}}
+        self.market_data_df = DataFrame()
 
         # Order Data Dictionary
         self.order_data_db = []
@@ -468,15 +469,15 @@ class EAConnector:
         print("\n++ [KERNEL] poll_data() Signing Out ++")
 
     def subscribe_marketdata(self,
-                             _symbol='EURUSD'):
+                             symbol='EURUSD'):
         """
         Function to subscribe to given Symbol's BID/ASK feed from MetaTrader
         """
 
         # Subscribe to SYMBOL first.
-        self._SUB_SOCKET.setsockopt_string(zmq.SUBSCRIBE, _symbol)
+        self._SUB_SOCKET.setsockopt_string(zmq.SUBSCRIBE, symbol)
 
-        print("[KERNEL] Subscribed to {} BID/ASK updates. See self.market_data_db.".format(_symbol))
+        print("[KERNEL] Subscribed to {} BID/ASK updates. See self.market_data_db.".format(symbol))
 
     def unsubscribe_marketdata(self, _symbol):
         """

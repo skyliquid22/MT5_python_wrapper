@@ -5,15 +5,17 @@ from src.client import ea_api
 
 
 class Client:
+    """
+    TODO: move class methods to connector.py
+    """
 
     def __init__(self):
         self.conn = ea_api.EAConnector(client_id='ai_001')
         self.market_data = pd.DataFrame()
 
-    def parse_market_data(self):
+    def market_to_df(self):
         """
         Returns a DataFrame object of the market_data_db variable which collects data from the Connector's subscribe socket
-        :return: (DataFrame) Parsed BID/ASK market data for every symbol in multi-index columns
         """
         rawdata = self.conn.market_data_db
         df = pd.DataFrame(rawdata)
@@ -28,4 +30,8 @@ class Client:
             new.columns = pd.MultiIndex.from_arrays([[symbol, symbol], ['BUY', 'SELL']])
             self.market_data = pd.concat([self.market_data, new], axis=1)
 
+    def stream_market(self, symbols):
 
+        self.conn.send_trackprices_request(symbols)
+        for symbol in symbols:
+            self.conn.subscribe_marketdata(symbol)

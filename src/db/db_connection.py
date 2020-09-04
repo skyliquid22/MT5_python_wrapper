@@ -25,8 +25,6 @@ class DBConnector:
             database=self.params['database'],
         )
         self.engine = create_engine(engine_string)
-        self.cur = None
-        self.conn = None
 
     def get_df_from_table(self, table_name, **kwargs):
         """ Return a pandas DataFrame of the DB table """
