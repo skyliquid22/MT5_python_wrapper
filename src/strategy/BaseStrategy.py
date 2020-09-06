@@ -21,7 +21,7 @@ class BaseStrategy(object):
         self.verbose = verbose
 
         self.conn = Connector()
-
+        self.dbconn = DBConnector()
         # Strategy's ON/OFF switch
         self.isON = True
         self.trades = pd.DataFrame(columns=['orderid', 'timestamp', 'retcode', 'symbol', 'price', 'bid', 'ask',
@@ -32,7 +32,11 @@ class BaseStrategy(object):
         self.lock = Lock()
 
     def _save_order(self, result):
-        dbconn = DBConnector()
+        """
+        Save Successful orders to self.trades
+        :param result: (obj) the return of send_command().
+        """
+
         now = datetime.datetime.utcnow()
 
         result_dict = result._asdict()
@@ -62,13 +66,15 @@ class BaseStrategy(object):
             traderequest_dict['comment']
 
         ])
+        # Update
         self.trades = self.trades.append(pd.concat([result_dict, traderequest_dict]), ignore_index=True)
 
         sql = """INSERT INTO order_history (
         orderid, timestamp, retcode, symbol, price, bid, ask, comment, volume, dealid, tr_action, tr_volume, tr_price,
         tr_stoplimit, tr_sl, tr_tp, tr_type, tr_type_filling, tr_type_time, tr_expiration, tr_comment
         ) VALUES {}""".format(vals)
-        dbconn.execute_query(sql)
+
+        self.dbconn.execute_query(sql)
 
 
 class CoinFlipStrategy(BaseStrategy):
@@ -120,8 +126,14 @@ class CoinFlipStrategy(BaseStrategy):
 
             sleep(self.delay)
 
-    def _trader(self):
+    def _trader(self, symbol, max_trades):
         """
         TODO: use self.conn.make_request()
         """
         self.conn.make_request()
+
+        while self.isON:
+            # Acquire lock
+            self.lock.acquire()
+
+
